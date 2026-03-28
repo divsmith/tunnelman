@@ -7,14 +7,21 @@ import os
 /// - Upgrades WebSocket connections at /ws?token=<token>
 final class LocalHTTPServer {
     private let token: String
+    private let requiresExternalAuth: Bool
     private weak var ptyManager: PTYManager?
     private var listener: NWListener?
     private var connections: [ObjectIdentifier: WebSocketConnection] = [:]
     private let queue = DispatchQueue(label: "mactunnel.server")
     private static let log = Logger(subsystem: "mactunnel", category: "server")
 
-    init(token: String, ptyManager: PTYManager) {
+    /// - Parameter requiresExternalAuth: When `true` (DevTunnel mode), the tunnel provider
+    ///   already gates access with GitHub/Microsoft auth, so any request reaching this server
+    ///   comes from an authenticated user. Unknown paths are redirected to the terminal instead
+    ///   of returning 404, which recovers gracefully from post-auth redirects that drop the
+    ///   original path.
+    init(token: String, ptyManager: PTYManager, requiresExternalAuth: Bool = false) {
         self.token = token
+        self.requiresExternalAuth = requiresExternalAuth
         self.ptyManager = ptyManager
 
         // Broadcast PTY output to all connected WebSocket clients
@@ -63,7 +70,7 @@ final class LocalHTTPServer {
 
     private func handleConnection(_ nwConn: NWConnection) {
         // Read the first HTTP request to decide: plain HTTP or WebSocket upgrade
-        let conn = HTTPConnection(nwConnection: nwConn, token: token, ptyManager: ptyManager) { [weak self] ws in
+        let conn = HTTPConnection(nwConnection: nwConn, token: token, ptyManager: ptyManager, requiresExternalAuth: requiresExternalAuth) { [weak self] ws in
             guard let self else { return }
             let id = ObjectIdentifier(ws)
             self.connections[id] = ws

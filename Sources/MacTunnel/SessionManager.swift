@@ -45,7 +45,7 @@ final class SessionManager: ObservableObject {
                 self.ptyManager = pty
 
                 // Start HTTP + WebSocket server
-                let server = LocalHTTPServer(token: sessionToken, ptyManager: pty)
+                let server = LocalHTTPServer(token: sessionToken, ptyManager: pty, requiresExternalAuth: tunnelMode == .devtunnel)
                 let resolvedPort = try server.start()
                 self.resolvedPort = resolvedPort
                 self.httpServer = server
