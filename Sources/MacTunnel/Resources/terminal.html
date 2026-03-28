@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>MacTunnel Terminal</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.css" />
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --text: #e6edf3;
+    --text-dim: #8b949e;
+    --key-bg: #21262d;
+    --key-hover: #30363d;
+    --key-active: #388bfd;
+    --connected: #3fb950;
+    --disconnected: #f85149;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Status bar ── */
+  #statusbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    font-size: 13px;
+  }
+
+  #status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--disconnected);
+    transition: background .3s;
+    flex-shrink: 0;
+  }
+  #status-dot.connected { background: var(--connected); }
+
+  #status-text { color: var(--text-dim); flex: 1; }
+  #status-text span { color: var(--text); }
+
+  /* ── Terminal container ── */
+  #terminal-wrapper {
+    flex: 1;
+    overflow: hidden;
+    padding: 4px;
+    min-height: 0;
+  }
+
+  #terminal { height: 100%; }
+
+  /* ── Key bar ── */
+  #keybar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    padding: 8px 10px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+  }
+
+  .key {
+    background: var(--key-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-size: 12px;
+    padding: 6px 10px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    touch-action: manipulation;
+    transition: background .1s, transform .1s;
+    min-width: 36px;
+    text-align: center;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  .key:hover   { background: var(--key-hover); }
+  .key:active  { background: var(--key-active); transform: scale(.95); }
+  .key.wide    { padding-left: 16px; padding-right: 16px; }
+  .key.danger  { border-color: #f85149; color: #f85149; }
+
+  /* ── Overlay ── */
+  #overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,.8);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    z-index: 100;
+  }
+
+  #overlay.hidden { display: none; }
+
+  #overlay-icon { font-size: 48px; }
+  #overlay-title { font-size: 20px; font-weight: 600; color: var(--text); }
+  #overlay-msg   { font-size: 14px; color: var(--text-dim); text-align: center; max-width: 280px; }
+
+  .spinner {
+    width: 32px; height: 32px;
+    border: 3px solid var(--border);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .8s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="statusbar">
+  <div id="status-dot"></div>
+  <div id="status-text">Connecting<span id="host-label"></span>…</div>
+</div>
+
+<div id="terminal-wrapper">
+  <div id="terminal"></div>
+</div>
+
+<div id="keybar">
+  <button class="key" data-seq="&#x1b;">Esc</button>
+  <button class="key" data-seq="&#x09;">Tab</button>
+  <button class="key wide" data-seq="&#x0d;">↵ Enter</button>
+  <button class="key" data-seq="&#x1b;[A">↑</button>
+  <button class="key" data-seq="&#x1b;[B">↓</button>
+  <button class="key" data-seq="&#x1b;[D">←</button>
+  <button class="key" data-seq="&#x1b;[C">→</button>
+  <button class="key danger" data-ctrl="C">^C</button>
+  <button class="key" data-ctrl="D">^D</button>
+  <button class="key" data-ctrl="Z">^Z</button>
+  <button class="key" data-ctrl="L">^L</button>
+  <button class="key" data-seq="&#x7f;">⌫</button>
+</div>
+
+<div id="overlay">
+  <div id="overlay-icon">🔌</div>
+  <div id="overlay-title">Connecting…</div>
+  <div id="overlay-msg">Establishing secure WebSocket connection</div>
+  <div class="spinner"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.js"></script>
+
+<script>
+(function () {
+  'use strict';
+
+  // ── Parse URL params ──────────────────────────────────────────────────────
+  const params = new URLSearchParams(window.location.search);
+  const token  = params.get('token') || '';
+
+  if (!token) {
+    showError('❌', 'No session token', 'This URL is invalid. Scan the QR code from MacTunnel.');
+    return;
+  }
+
+  // ── xterm.js setup ────────────────────────────────────────────────────────
+  const term = new Terminal({
+    cursorBlink: true,
+    fontFamily: '"JetBrains Mono", "Cascadia Code", "Fira Code", "SF Mono", monospace',
+    fontSize: window.innerWidth < 500 ? 13 : 15,
+    theme: {
+      background:   '#0d1117',
+      foreground:   '#e6edf3',
+      cursor:       '#58a6ff',
+      cursorAccent: '#0d1117',
+      black:        '#484f58',
+      red:          '#ff7b72',
+      green:        '#3fb950',
+      yellow:       '#d29922',
+      blue:         '#58a6ff',
+      magenta:      '#bc8cff',
+      cyan:         '#39c5cf',
+      white:        '#b1bac4',
+      brightBlack:  '#6e7681',
+      brightRed:    '#ffa198',
+      brightGreen:  '#56d364',
+      brightYellow: '#e3b341',
+      brightBlue:   '#79c0ff',
+      brightMagenta:'#d2a8ff',
+      brightCyan:   '#56d4dd',
+      brightWhite:  '#f0f6fc',
+    },
+    allowProposedApi: true,
+  });
+
+  const fitAddon = new FitAddon.FitAddon();
+  term.loadAddon(fitAddon);
+  term.open(document.getElementById('terminal'));
+  fitAddon.fit();
+
+  // ── WebSocket ─────────────────────────────────────────────────────────────
+  const wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const wsURL = `${wsProtocol}//${location.host}/ws?token=${encodeURIComponent(token)}`;
+  let ws = null;
+  let reconnectTimer = null;
+  let reconnectDelay = 1000;
+
+  function connect() {
+    ws = new WebSocket(wsURL);
+    ws.binaryType = 'arraybuffer';
+
+    ws.addEventListener('open', () => {
+      setConnected(true);
+      reconnectDelay = 1000;
+      sendResize();
+    });
+
+    ws.addEventListener('message', (e) => {
+      const data = e.data instanceof ArrayBuffer
+        ? new Uint8Array(e.data)
+        : e.data;
+      term.write(data);
+    });
+
+    ws.addEventListener('close', (e) => {
+      setConnected(false);
+      if (e.code !== 1000) scheduleReconnect();
+    });
+
+    ws.addEventListener('error', () => {
+      setConnected(false);
+    });
+  }
+
+  function scheduleReconnect() {
+    showOverlay('🔄', 'Reconnecting…', `Retrying in ${Math.round(reconnectDelay / 1000)}s`);
+    clearTimeout(reconnectTimer);
+    reconnectTimer = setTimeout(() => {
+      connect();
+      reconnectDelay = Math.min(reconnectDelay * 1.5, 10000);
+    }, reconnectDelay);
+  }
+
+  function send(data) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+      ws.send(data);
+    }
+  }
+
+  // ── Terminal → WebSocket ──────────────────────────────────────────────────
+  term.onData((data) => send(data));
+
+  // ── Key bar ───────────────────────────────────────────────────────────────
+  document.querySelectorAll('.key').forEach(btn => {
+    btn.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      const seq = btn.dataset.seq;
+      const ctrl = btn.dataset.ctrl;
+      if (seq) {
+        send(seq);
+      } else if (ctrl) {
+        const code = ctrl.charCodeAt(0) - 64; // A=1, C=3, etc.
+        send(String.fromCharCode(code));
+      }
+      term.focus();
+    });
+  });
+
+  // ── Resize ────────────────────────────────────────────────────────────────
+  function sendResize() {
+    const msg = JSON.stringify({ type: 'resize', cols: term.cols, rows: term.rows });
+    send(msg);
+  }
+
+  const resizeObserver = new ResizeObserver(() => {
+    fitAddon.fit();
+    sendResize();
+  });
+  resizeObserver.observe(document.getElementById('terminal-wrapper'));
+
+  window.addEventListener('resize', () => { fitAddon.fit(); sendResize(); });
+
+  // ── Overlay helpers ───────────────────────────────────────────────────────
+  const overlay = document.getElementById('overlay');
+
+  function showOverlay(icon, title, msg) {
+    document.getElementById('overlay-icon').textContent = icon;
+    document.getElementById('overlay-title').textContent = title;
+    document.getElementById('overlay-msg').textContent = msg;
+    overlay.classList.remove('hidden');
+  }
+
+  function hideOverlay() {
+    overlay.classList.add('hidden');
+  }
+
+  function showError(icon, title, msg) {
+    showOverlay(icon, title, msg);
+    document.querySelector('.spinner').style.display = 'none';
+  }
+
+  function setConnected(yes) {
+    const dot  = document.getElementById('status-dot');
+    const text = document.getElementById('status-text');
+    if (yes) {
+      dot.classList.add('connected');
+      text.innerHTML = 'Connected to <span>MacTunnel</span>';
+      hideOverlay();
+      term.focus();
+    } else {
+      dot.classList.remove('connected');
+      text.textContent = 'Disconnected';
+    }
+  }
+
+  // ── Start ─────────────────────────────────────────────────────────────────
+  connect();
+})();
+</script>
+</body>
+</html>
