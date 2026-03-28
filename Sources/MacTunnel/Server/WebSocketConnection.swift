@@ -1,6 +1,6 @@
 import Foundation
 import Network
-import CryptoKit
+import MacTunnelCore
 import os
 
 private let log = Logger(subsystem: "mactunnel", category: "websocket")
@@ -137,29 +137,10 @@ final class WebSocketConnection {
     }
 
     private func makeAcceptKey(from key: String) -> String {
-        let magic = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11"
-        let combined = key + magic
-        let hash = Insecure.SHA1.hash(data: Data(combined.utf8))
-        return Data(hash).base64EncodedString()
+        webSocketAcceptKey(for: key)
     }
 
     private func encodeFrame(data: Data, opcode: UInt8) -> Data {
-        var frame = Data()
-        frame.append(0x80 | opcode) // FIN + opcode
-        let len = data.count
-        if len < 126 {
-            frame.append(UInt8(len))
-        } else if len < 65536 {
-            frame.append(126)
-            frame.append(UInt8((len >> 8) & 0xFF))
-            frame.append(UInt8(len & 0xFF))
-        } else {
-            frame.append(127)
-            for i in stride(from: 56, through: 0, by: -8) {
-                frame.append(UInt8((len >> i) & 0xFF))
-            }
-        }
-        frame.append(data)
-        return frame
+        webSocketEncodeFrame(data: data, opcode: opcode)
     }
 }

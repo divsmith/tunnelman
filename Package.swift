@@ -10,13 +10,23 @@ let package = Package(
             path: "Sources/MacTunnelHelper",
             publicHeadersPath: "include"
         ),
+        // Pure-logic library: no AppKit/SwiftUI, no OS I/O — fully testable
+        .target(
+            name: "MacTunnelCore",
+            path: "Sources/MacTunnelCore"
+        ),
         .executableTarget(
             name: "MacTunnel",
-            dependencies: ["MacTunnelHelper"],
+            dependencies: ["MacTunnelHelper", "MacTunnelCore"],
             path: "Sources/MacTunnel",
             resources: [
                 .process("Resources")
             ]
+        ),
+        .testTarget(
+            name: "MacTunnelTests",
+            dependencies: ["MacTunnelCore"],
+            path: "Tests/MacTunnelTests"
         )
     ]
 )

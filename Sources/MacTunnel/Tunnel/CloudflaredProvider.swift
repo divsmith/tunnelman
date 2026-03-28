@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import MacTunnelCore
 
 /// Tunnel provider using Cloudflare's cloudflared CLI (trycloudflare.com quick tunnels).
 /// No account required for quick tunnels; however, authentication is provided by the session token.
@@ -54,17 +55,8 @@ final class CloudflaredProvider: TunnelProvider {
     }
 
     private func parseOutput(_ text: String) {
-        // cloudflared outputs something like:
-        //   INF +--------------------------------------------------------------------------------------------+
-        //   INF |  Your quick Tunnel has been created! Visit it at (it may take some time to be reachable): |
-        //   INF |  https://random-words.trycloudflare.com                                                   |
-        //   INF +--------------------------------------------------------------------------------------------+
-        let pattern = #"https://[a-z0-9\-]+\.trycloudflare\.com"#
-        if let range = text.range(of: pattern, options: .regularExpression) {
-            let urlStr = String(text[range])
-            if let url = URL(string: urlStr) {
-                urlSubject.send(url)
-            }
+        if let url = parseCloudflaredURL(from: text) {
+            urlSubject.send(url)
         }
     }
 }

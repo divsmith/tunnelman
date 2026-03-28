@@ -1,5 +1,6 @@
 import Foundation
 import Combine
+import MacTunnelCore
 
 /// Tunnel provider using Microsoft DevTunnel CLI.
 /// Requires: `devtunnel user login` completed once beforehand.
@@ -52,22 +53,8 @@ final class DevTunnelProvider: TunnelProvider {
     }
 
     private func parseOutput(_ text: String) {
-        // devtunnel outputs lines like:
-        //   Connect via browser: https://abc123.devtunnels.ms
-        // or
-        //   Tunnel ID: abc123
-        //   Hosting port: 8080 at https://abc123-8080.devtunnels.ms
-        let patterns = [
-            #"https://[a-z0-9\-]+\.devtunnels\.ms[^\s]*"#,
-        ]
-        for pattern in patterns {
-            if let range = text.range(of: pattern, options: .regularExpression) {
-                let urlStr = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
-                if let url = URL(string: urlStr) {
-                    urlSubject.send(url)
-                    return
-                }
-            }
+        if let url = parseDevTunnelURL(from: text) {
+            urlSubject.send(url)
         }
     }
 }

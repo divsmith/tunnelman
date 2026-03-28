@@ -1,5 +1,6 @@
 import Foundation
 import Network
+import MacTunnelCore
 import os
 
 private let log = Logger(subsystem: "mactunnel", category: "http")
@@ -82,9 +83,7 @@ final class HTTPConnection {
     }
 
     private func extractToken(from path: String) -> String? {
-        guard let queryStart = path.firstIndex(of: "?") else { return nil }
-        let query = String(path[path.index(after: queryStart)...])
-        return URLComponents(string: "http://x?\(query)")?.queryItems?.first(where: { $0.name == "token" })?.value
+        extractSessionToken(from: path)
     }
 
     private func serveTerminalHTML() {
