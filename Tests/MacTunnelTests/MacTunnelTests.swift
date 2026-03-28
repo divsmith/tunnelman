@@ -128,17 +128,18 @@ struct TokenExtractionTests {
 @Suite("DevTunnel URL Parsing")
 struct DevTunnelURLParsingTests {
     @Test func typicalConnectLine() {
+        // Real format: cluster code (e.g. "usw3") is part of the subdomain
         let output = """
-        Hosting port(s): 8080
-        Connect via browser: https://abc123def.devtunnels.ms
-        Tunnel is ready!
+        Hosting port: 19999
+        Connect via browser: https://abc123def-19999.usw3.devtunnels.ms
+        Inspect network activity: https://abc123def-19999-inspect.usw3.devtunnels.ms
         """
-        #expect(parseDevTunnelURL(from: output)?.absoluteString == "https://abc123def.devtunnels.ms")
+        #expect(parseDevTunnelURL(from: output)?.absoluteString == "https://abc123def-19999.usw3.devtunnels.ms")
     }
 
     @Test func urlWithPortSuffix() {
-        let output = "Hosting port 8080 at https://abc123-8080.devtunnels.ms"
-        #expect(parseDevTunnelURL(from: output)?.absoluteString == "https://abc123-8080.devtunnels.ms")
+        let output = "Hosting port 8080 at https://abc123-8080.usw3.devtunnels.ms"
+        #expect(parseDevTunnelURL(from: output)?.absoluteString == "https://abc123-8080.usw3.devtunnels.ms")
     }
 
     @Test func urlWithPath() {
@@ -155,7 +156,7 @@ struct DevTunnelURLParsingTests {
     }
 
     @Test func schemeIsHTTPS() {
-        #expect(parseDevTunnelURL(from: "https://my-tunnel.devtunnels.ms")?.scheme == "https")
+        #expect(parseDevTunnelURL(from: "https://my-tunnel.usw3.devtunnels.ms")?.scheme == "https")
     }
 }
 

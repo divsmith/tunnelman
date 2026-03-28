@@ -43,8 +43,9 @@ public func extractSessionToken(from path: String) -> String? {
 // MARK: - Tunnel URL parsing
 
 /// Parses a DevTunnel public URL from a chunk of devtunnel CLI output.
+/// Matches multi-level subdomains like `abc123-8080.usw3.devtunnels.ms`.
 public func parseDevTunnelURL(from text: String) -> URL? {
-    guard let range = text.range(of: #"https://[a-z0-9\-]+\.devtunnels\.ms[^\s]*"#, options: .regularExpression) else {
+    guard let range = text.range(of: #"https://[a-z0-9][a-z0-9\-\.]+\.devtunnels\.ms[^\s]*"#, options: .regularExpression) else {
         return nil
     }
     return URL(string: String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines))
