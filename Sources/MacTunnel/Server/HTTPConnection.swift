@@ -61,6 +61,12 @@ final class HTTPConnection {
         // Check for WebSocket upgrade
         let isUpgrade = lines.contains { $0.lowercased().hasPrefix("upgrade: websocket") }
 
+        // Detect DevTunnel: preserve Host header so we can redirect instead of 404 after auth.
+        let isDevTunnel = lines.contains { line in
+            let lower = line.lowercased()
+            return lower.hasPrefix("host:") && lower.contains("devtunnels.ms")
+        }
+
         if isUpgrade && path.hasPrefix("/ws") {
             // Validate token from query string
             guard extractToken(from: path) == token else {
@@ -74,10 +80,14 @@ final class HTTPConnection {
         } else if path == "/" || path == "/terminal" || path.hasPrefix("/terminal?") {
             // Validate token
             guard extractToken(from: path) == token else {
+                // After devtunnel GitHub auth the browser may land on / with no token; redirect to terminal.
+                if isDevTunnel { sendRedirect(to: "/terminal?token=\(token)"); return }
                 send401(); return
             }
             serveTerminalHTML()
         } else {
+            // After devtunnel auth the redirect may land on an unrecognised path; send the user to the terminal.
+            if isDevTunnel { sendRedirect(to: "/terminal?token=\(token)"); return }
             send404()
         }
     }
@@ -95,6 +105,13 @@ final class HTTPConnection {
         var response = Data(header.utf8)
         response.append(html)
         nwConnection.send(content: response, completion: .contentProcessed { [weak self] _ in
+            self?.nwConnection.cancel()
+        })
+    }
+
+    private func sendRedirect(to location: String) {
+        let header = "HTTP/1.1 302 Found\r\nLocation: \(location)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
+        nwConnection.send(content: Data(header.utf8), completion: .contentProcessed { [weak self] _ in
             self?.nwConnection.cancel()
         })
     }
