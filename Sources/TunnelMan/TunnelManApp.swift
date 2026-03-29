@@ -2,7 +2,7 @@ import SwiftUI
 import AppKit
 
 @main
-struct MacTunnelApp: App {
+struct TunnelManApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

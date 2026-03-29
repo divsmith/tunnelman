@@ -1,6 +1,6 @@
 import Foundation
 import Combine
-import MacTunnelCore
+import TunnelManCore
 
 /// Tunnel provider using Microsoft DevTunnel CLI.
 /// Requires: `devtunnel user login` completed once beforehand.

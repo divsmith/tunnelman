@@ -1,6 +1,6 @@
 import SwiftUI
 import ServiceManagement
-import MacTunnelServer
+import TunnelManServer
 
 struct SettingsView: View {
     @ObservedObject var sessionManager: SessionManager

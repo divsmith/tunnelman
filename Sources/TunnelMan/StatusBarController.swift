@@ -1,6 +1,6 @@
 import AppKit
 import SwiftUI
-import MacTunnelServer
+import TunnelManServer
 
 @MainActor
 final class StatusBarController: NSObject {
@@ -14,7 +14,7 @@ final class StatusBarController: NSObject {
         super.init()
 
         if let button = statusItem.button {
-            button.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "MacTunnel")
+            button.image = NSImage(systemSymbolName: "terminal", accessibilityDescription: "TunnelMan")
             button.action = #selector(togglePopover)
             button.target = self
         }
@@ -43,6 +43,6 @@ final class StatusBarController: NSObject {
         case .connected: symbolName = "network"
         case .error:     symbolName = "exclamationmark.triangle"
         }
-        statusItem.button?.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "MacTunnel")
+        statusItem.button?.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "TunnelMan")
     }
 }

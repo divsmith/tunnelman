@@ -1,7 +1,7 @@
 import Testing
 import Foundation
-import MacTunnelCore
-@testable import MacTunnelServer
+import TunnelManCore
+@testable import TunnelManServer
 
 // ============================================================
 // MARK: - WebSocket Accept Key (RFC 6455 §1.3)

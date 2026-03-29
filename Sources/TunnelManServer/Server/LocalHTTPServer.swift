@@ -11,8 +11,8 @@ final class LocalHTTPServer {
     private weak var ptyManager: PTYManager?
     private var listener: NWListener?
     private var connections: [ObjectIdentifier: WebSocketConnection] = [:]
-    private let queue = DispatchQueue(label: "mactunnel.server")
-    private static let log = Logger(subsystem: "mactunnel", category: "server")
+    private let queue = DispatchQueue(label: "tunnelman.server")
+    private static let log = Logger(subsystem: "tunnelman", category: "server")
 
     /// - Parameter requiresExternalAuth: When `true` (DevTunnel mode), the tunnel provider
     ///   already gates access with GitHub/Microsoft auth, so any request reaching this server

@@ -1,9 +1,9 @@
 import Foundation
 import Network
-import MacTunnelCore
+import TunnelManCore
 import os
 
-private let log = Logger(subsystem: "mactunnel", category: "websocket")
+private let log = Logger(subsystem: "tunnelman", category: "websocket")
 
 /// Manages a WebSocket connection for a single browser client.
 /// Performs the RFC 6455 handshake manually (since NWProtocolWebSocket

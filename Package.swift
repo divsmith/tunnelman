@@ -2,37 +2,37 @@
 import PackageDescription
 
 let package = Package(
-    name: "MacTunnel",
+    name: "TunnelMan",
     platforms: [.macOS(.v13)],
     targets: [
         .target(
-            name: "MacTunnelHelper",
-            path: "Sources/MacTunnelHelper",
+            name: "TunnelManHelper",
+            path: "Sources/TunnelManHelper",
             publicHeadersPath: "include"
         ),
         // Pure-logic library: no AppKit/SwiftUI, no OS I/O — fully testable
         .target(
-            name: "MacTunnelCore",
-            path: "Sources/MacTunnelCore"
+            name: "TunnelManCore",
+            path: "Sources/TunnelManCore"
         ),
         // Server, terminal, tunnel logic — no AppKit/SwiftUI, fully testable
         .target(
-            name: "MacTunnelServer",
-            dependencies: ["MacTunnelHelper", "MacTunnelCore"],
-            path: "Sources/MacTunnelServer",
+            name: "TunnelManServer",
+            dependencies: ["TunnelManHelper", "TunnelManCore"],
+            path: "Sources/TunnelManServer",
             resources: [
                 .process("Resources")
             ]
         ),
         .executableTarget(
-            name: "MacTunnel",
-            dependencies: ["MacTunnelServer"],
-            path: "Sources/MacTunnel"
+            name: "TunnelMan",
+            dependencies: ["TunnelManServer"],
+            path: "Sources/TunnelMan"
         ),
         .testTarget(
-            name: "MacTunnelTests",
-            dependencies: ["MacTunnelCore", "MacTunnelServer"],
-            path: "Tests/MacTunnelTests"
+            name: "TunnelManTests",
+            dependencies: ["TunnelManCore", "TunnelManServer"],
+            path: "Tests/TunnelManTests"
         )
     ]
 )

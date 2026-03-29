@@ -1,5 +1,5 @@
 import SwiftUI
-import MacTunnelServer
+import TunnelManServer
 
 struct PopoverView: View {
     @ObservedObject var sessionManager: SessionManager
@@ -27,7 +27,7 @@ struct PopoverView: View {
         HStack {
             Image(systemName: "terminal.fill")
                 .foregroundColor(.accentColor)
-            Text("MacTunnel")
+            Text("TunnelMan")
                 .font(.headline)
             Spacer()
             Button {

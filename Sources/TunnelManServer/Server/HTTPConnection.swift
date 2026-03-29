@@ -1,9 +1,9 @@
 import Foundation
 import Network
-import MacTunnelCore
+import TunnelManCore
 import os
 
-private let log = Logger(subsystem: "mactunnel", category: "http")
+private let log = Logger(subsystem: "tunnelman", category: "http")
 
 /// Handles a single incoming TCP connection: parses HTTP request and routes it.
 final class HTTPConnection {

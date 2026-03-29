@@ -1,6 +1,6 @@
 import Foundation
 import Combine
-import MacTunnelCore
+import TunnelManCore
 
 /// Tunnel provider using Cloudflare's cloudflared CLI (trycloudflare.com quick tunnels).
 /// No account required for quick tunnels; however, authentication is provided by the session token.

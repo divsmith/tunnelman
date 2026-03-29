@@ -1,6 +1,6 @@
 import Foundation
 import Darwin
-import MacTunnelHelper
+import TunnelManHelper
 
 /// Manages a pseudo-terminal (PTY) running the user's shell.
 final class PTYManager {
