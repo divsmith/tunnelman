@@ -1,4 +1,5 @@
 import SwiftUI
+import MacTunnelServer
 
 struct PopoverView: View {
     @ObservedObject var sessionManager: SessionManager

@@ -1,6 +1,7 @@
 import Testing
 import Foundation
 import MacTunnelCore
+@testable import MacTunnelServer
 
 // ============================================================
 // MARK: - WebSocket Accept Key (RFC 6455 §1.3)
@@ -195,5 +196,48 @@ struct CloudflaredURLParsingTests {
     @Test func hostIsCorrect() {
         let output = "Visit https://tunnel-abc123.trycloudflare.com now"
         #expect(parseCloudflaredURL(from: output)?.host == "tunnel-abc123.trycloudflare.com")
+    }
+}
+
+// ============================================================
+// MARK: - LocalHTTPServer Integration
+// ============================================================
+
+@Suite("LocalHTTPServer Integration")
+struct LocalHTTPServerIntegrationTests {
+
+    @Test func serveTerminalHTML() async throws {
+        let token = "TESTTOKEN1234"
+        let pty = PTYManager()
+        try pty.start()
+        defer { pty.stop() }
+
+        let server = LocalHTTPServer(token: token, ptyManager: pty, requiresExternalAuth: false)
+        let port = try server.start()
+        defer { server.stop() }
+
+        let url = URL(string: "http://localhost:\(port)/terminal?token=\(token)")!
+        let (data, response) = try await URLSession.shared.data(from: url)
+        let status = (response as! HTTPURLResponse).statusCode
+
+        #expect(status == 200, "Expected 200, got \(status)")
+        #expect(String(data: data, encoding: .utf8)?.contains("<html") == true, "Expected HTML response")
+    }
+
+    @Test func rejectsMissingToken() async throws {
+        let token = "TESTTOKEN1234"
+        let pty = PTYManager()
+        try pty.start()
+        defer { pty.stop() }
+
+        let server = LocalHTTPServer(token: token, ptyManager: pty, requiresExternalAuth: false)
+        let port = try server.start()
+        defer { server.stop() }
+
+        let url = URL(string: "http://localhost:\(port)/terminal")!
+        let (_, response) = try await URLSession.shared.data(from: url)
+        let status = (response as! HTTPURLResponse).statusCode
+
+        #expect(status == 401, "Expected 401 for missing token, got \(status)")
     }
 }

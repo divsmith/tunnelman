@@ -34,8 +34,7 @@ final class HTTPConnection {
     }
 
     private func receiveHTTPRequest() {
-        nwConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [weak self] data, _, isComplete, error in
-            guard let self else { return }
+        nwConnection.receive(minimumIncompleteLength: 1, maximumLength: 65536) { [self] data, _, isComplete, error in
             if let data { self.buffer.append(data) }
 
             // Wait until we have the full HTTP header (ends with \r\n\r\n)
@@ -71,8 +70,8 @@ final class HTTPConnection {
             }
             // Hand off to WebSocket handler
             let wsConn = WebSocketConnection(nwConnection: nwConnection, ptyManager: ptyManager, httpHeader: header)
-            wsConn.performHandshake(originalHeader: header) { [weak self] in
-                self?.onWebSocketUpgrade(wsConn)
+            wsConn.performHandshake(originalHeader: header) { [self] in
+                self.onWebSocketUpgrade(wsConn)
             }
         } else if path == "/" || path == "/terminal" || path.hasPrefix("/terminal?") {
             // Validate token
@@ -101,15 +100,15 @@ final class HTTPConnection {
         let header = "HTTP/1.1 200 OK\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(html.count)\r\nConnection: close\r\n\r\n"
         var response = Data(header.utf8)
         response.append(html)
-        nwConnection.send(content: response, completion: .contentProcessed { [weak self] _ in
-            self?.nwConnection.cancel()
+        nwConnection.send(content: response, completion: .contentProcessed { [self] _ in
+            self.nwConnection.cancel()
         })
     }
 
     private func sendRedirect(to location: String) {
         let header = "HTTP/1.1 302 Found\r\nLocation: \(location)\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
-        nwConnection.send(content: Data(header.utf8), completion: .contentProcessed { [weak self] _ in
-            self?.nwConnection.cancel()
+        nwConnection.send(content: Data(header.utf8), completion: .contentProcessed { [self] _ in
+            self.nwConnection.cancel()
         })
     }
 
@@ -134,8 +133,8 @@ final class HTTPConnection {
         let header = "HTTP/1.1 \(code)\r\nContent-Type: text/plain\r\nContent-Length: \(bodyData.count)\r\nConnection: close\r\n\r\n"
         var response = Data(header.utf8)
         response.append(bodyData)
-        nwConnection.send(content: response, completion: .contentProcessed { [weak self] _ in
-            self?.nwConnection.cancel()
+        nwConnection.send(content: response, completion: .contentProcessed { [self] _ in
+            self.nwConnection.cancel()
         })
     }
 }

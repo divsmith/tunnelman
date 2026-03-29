@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import MacTunnelServer
 
 @MainActor
 final class StatusBarController: NSObject {

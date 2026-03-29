@@ -15,17 +15,23 @@ let package = Package(
             name: "MacTunnelCore",
             path: "Sources/MacTunnelCore"
         ),
-        .executableTarget(
-            name: "MacTunnel",
+        // Server, terminal, tunnel logic — no AppKit/SwiftUI, fully testable
+        .target(
+            name: "MacTunnelServer",
             dependencies: ["MacTunnelHelper", "MacTunnelCore"],
-            path: "Sources/MacTunnel",
+            path: "Sources/MacTunnelServer",
             resources: [
                 .process("Resources")
             ]
         ),
+        .executableTarget(
+            name: "MacTunnel",
+            dependencies: ["MacTunnelServer"],
+            path: "Sources/MacTunnel"
+        ),
         .testTarget(
             name: "MacTunnelTests",
-            dependencies: ["MacTunnelCore"],
+            dependencies: ["MacTunnelCore", "MacTunnelServer"],
             path: "Tests/MacTunnelTests"
         )
     ]

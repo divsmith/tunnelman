@@ -31,23 +31,32 @@ final class LocalProvider: TunnelProvider {
         guard getifaddrs(&ifaddr) == 0 else { return nil }
         defer { freeifaddrs(ifaddr) }
 
+        var fallback: String? = nil
         var current = ifaddr
         while let ifa = current {
+            defer { current = ifa.pointee.ifa_next }
+
             let flags = Int32(ifa.pointee.ifa_flags)
-            let isUp = (flags & IFF_UP) != 0
-            let isLoopback = (flags & IFF_LOOPBACK) != 0
-            if isUp && !isLoopback, ifa.pointee.ifa_addr.pointee.sa_family == UInt8(AF_INET) {
-                var addr = ifa.pointee.ifa_addr.pointee
-                var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
-                inet_ntop(AF_INET, &addr, &buf, socklen_t(INET_ADDRSTRLEN))
-                let ip = String(cString: buf)
-                // Prefer non-loopback, non-link-local
-                if !ip.hasPrefix("169.254") {
-                    return ip
-                }
+            guard (flags & IFF_UP) != 0, (flags & IFF_LOOPBACK) == 0 else { continue }
+            guard ifa.pointee.ifa_addr.pointee.sa_family == UInt8(AF_INET) else { continue }
+
+            // Reinterpret as sockaddr_in to access sin_addr correctly
+            var sinAddr = ifa.pointee.ifa_addr.withMemoryRebound(to: sockaddr_in.self, capacity: 1) {
+                $0.pointee.sin_addr
             }
-            current = ifa.pointee.ifa_next
+            var buf = [CChar](repeating: 0, count: Int(INET_ADDRSTRLEN))
+            inet_ntop(AF_INET, &sinAddr, &buf, socklen_t(INET_ADDRSTRLEN))
+            let ip = String(cString: buf)
+
+            guard !ip.hasPrefix("169.254") else { continue } // skip link-local
+
+            // Prefer physical/Wi-Fi interfaces (en0, en1, …) over VPN tunnels (utun*, etc.)
+            let name = String(cString: ifa.pointee.ifa_name)
+            if name.hasPrefix("en") {
+                return ip
+            }
+            if fallback == nil { fallback = ip }
         }
-        return nil
+        return fallback
     }
 }

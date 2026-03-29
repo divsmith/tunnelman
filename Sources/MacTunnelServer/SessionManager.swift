@@ -1,38 +1,40 @@
 import Foundation
 import Combine
 
-enum TunnelState: Equatable {
+public enum TunnelState: Equatable {
     case idle
     case starting
     case connected(url: URL)
     case error(message: String)
 }
 
-enum TunnelMode: String, CaseIterable, Identifiable {
+public enum TunnelMode: String, CaseIterable, Identifiable {
     case local = "Local Network"
     case devtunnel = "Microsoft DevTunnel"
     case cloudflare = "Cloudflare Tunnel"
 
-    var id: String { rawValue }
+    public var id: String { rawValue }
 }
 
 /// Central coordinator: owns the PTY, HTTP server, WebSocket handler, and tunnel provider.
 @MainActor
-final class SessionManager: ObservableObject {
-    @Published var tunnelState: TunnelState = .idle
-    @Published var tunnelMode: TunnelMode = .local
-    @Published var sessionURL: URL?
+public final class SessionManager: ObservableObject {
+    @Published public var tunnelState: TunnelState = .idle
+    @Published public var tunnelMode: TunnelMode = .local
+    @Published public var sessionURL: URL?
 
-    private(set) var sessionToken: String = ""
+    public private(set) var sessionToken: String = ""
     private var httpServer: LocalHTTPServer?
     private var ptyManager: PTYManager?
     private var tunnelProvider: TunnelProvider?
     private var cancellables = Set<AnyCancellable>()
 
-    let port: UInt16 = 0 // 0 = pick random available port; resolved at runtime
-    private(set) var resolvedPort: UInt16 = 0
+    public let port: UInt16 = 0
+    public private(set) var resolvedPort: UInt16 = 0
 
-    func startSession() {
+    public init() {}
+
+    public func startSession() {
         guard case .idle = tunnelState else { return }
         tunnelState = .starting
         sessionToken = UUID().uuidString.replacingOccurrences(of: "-", with: "")
@@ -80,7 +82,7 @@ final class SessionManager: ObservableObject {
         }
     }
 
-    func stopSession() {
+    public func stopSession() {
         tunnelProvider?.stop()
         httpServer?.stop()
         ptyManager?.stop()

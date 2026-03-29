@@ -40,9 +40,7 @@ final class LocalHTTPServer {
             self?.handleConnection(connection)
         }
 
-        listener.start(queue: queue)
-
-        // Wait briefly for the listener to resolve its port
+        // Set state handler before start() so the .ready event is never missed
         var resolved: UInt16 = 0
         let sem = DispatchSemaphore(value: 0)
         listener.stateUpdateHandler = { state in
@@ -53,6 +51,8 @@ final class LocalHTTPServer {
                 sem.signal()
             }
         }
+
+        listener.start(queue: queue)
         sem.wait()
 
         guard resolved > 0 else {
