@@ -53,6 +53,8 @@ struct PopoverView: View {
             connectedView
         case .error(let msg):
             errorView(msg)
+        case .needsDevTunnelLogin:
+            devTunnelLoginView
         }
     }
 
@@ -116,6 +118,43 @@ struct PopoverView: View {
         .frame(maxWidth: .infinity)
     }
 
+    private var devTunnelLoginView: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "person.badge.key.fill")
+                .font(.system(size: 36))
+                .foregroundColor(.orange)
+            Text("Sign in to DevTunnel")
+                .font(.headline)
+            Text("You must be logged in before hosting a DevTunnel session.")
+                .font(.caption)
+                .foregroundColor(.secondary)
+                .multilineTextAlignment(.center)
+
+            VStack(spacing: 8) {
+                Button {
+                    sessionManager.loginWithDevTunnel(github: false)
+                } label: {
+                    Text("Sign in with Microsoft")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .controlSize(.regular)
+
+                Button {
+                    sessionManager.loginWithDevTunnel(github: true)
+                } label: {
+                    Text("Sign in with GitHub")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+            }
+            .padding(.top, 4)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+    }
+
     private func errorView(_ message: String) -> some View {
         VStack(spacing: 8) {
             Image(systemName: "exclamationmark.triangle.fill")
@@ -175,20 +214,26 @@ struct PopoverView: View {
                 sessionManager.startSession()
             }
             .buttonStyle(.borderedProminent)
-            .controlSize(.small)
+            .controlSize(.regular)
         case .starting:
             Button("Cancel") {
                 sessionManager.stopSession()
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(.regular)
         case .connected:
             Button("Stop Session") {
                 sessionManager.stopSession()
             }
             .buttonStyle(.bordered)
-            .controlSize(.small)
+            .controlSize(.regular)
             .tint(.red)
+        case .needsDevTunnelLogin:
+            Button("Cancel") {
+                sessionManager.stopSession()
+            }
+            .buttonStyle(.bordered)
+            .controlSize(.regular)
         }
     }
 }

@@ -38,10 +38,11 @@ final class StatusBarController: NSObject {
     func updateIcon(state: TunnelState) {
         let symbolName: String
         switch state {
-        case .idle:      symbolName = "terminal"
-        case .starting:  symbolName = "terminal.fill"
-        case .connected: symbolName = "network"
-        case .error:     symbolName = "exclamationmark.triangle"
+        case .idle:              symbolName = "terminal"
+        case .starting:          symbolName = "terminal.fill"
+        case .connected:         symbolName = "network"
+        case .error:             symbolName = "exclamationmark.triangle"
+        case .needsDevTunnelLogin: symbolName = "person.badge.key"
         }
         statusItem.button?.image = NSImage(systemSymbolName: symbolName, accessibilityDescription: "TunnelMan")
     }
