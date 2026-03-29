@@ -92,20 +92,31 @@ brew install cloudflared
 
 ```bash
 git clone <repo-url>
-cd mactunnel
-./build.sh
+cd tunnelman
+make
 ```
 
 This produces **`output/TunnelMan.app`** — a self-contained macOS app bundle you can double-click, drag to `/Applications`, or run from the terminal.
 
-### What `build.sh` does
+### Available `make` targets
+
+| Target | Description |
+|--------|-------------|
+| `make` / `make build` | Release build + `.app` bundle (default) |
+| `make debug` | Debug binary via `swift build` |
+| `make test` | Run the test suite |
+| `make run` | Build and run the binary directly |
+| `make open` | Build and open the `.app` in macOS |
+| `make clean` | Remove `.build/` and `output/` |
+
+### What `make build` does
 
 1. Runs `swift build -c release` (uses only Xcode Command Line Tools, no Xcode.app)
 2. Creates a proper `.app` bundle structure in `output/`
 3. Generates `Info.plist` with correct metadata (menu-bar-only, bundle ID, version)
-4. Copies the compiled binary into the bundle
+4. Copies the compiled binary and resource bundle into the app bundle
 
-### Manual build (without the script)
+### Manual build (without make)
 
 If you prefer to build manually:
 
@@ -117,7 +128,7 @@ swift build -c release
 .build/release/TunnelMan
 ```
 
-> **Note:** The raw binary works but won't appear as a proper macOS app in Finder or Spotlight. Use `build.sh` for a real `.app` bundle.
+> **Note:** The raw binary works but won't appear as a proper macOS app in Finder or Spotlight. Use `make` for a real `.app` bundle.
 
 ### Building with Xcode (optional)
 
@@ -209,9 +220,9 @@ Click the **gear icon** (⚙) in the popover to open Settings:
 ## Project Structure
 
 ```
-mactunnel/
+tunnelman/
 ├── Package.swift                        # Swift Package manifest (macOS 13+)
-├── build.sh                             # Builds TunnelMan.app (no Xcode required)
+├── Makefile                             # Builds TunnelMan.app (no Xcode required)
 ├── Sources/
 │   ├── TunnelManHelper/                 # C helper (fork/exec into PTY)
 │   │   ├── include/pty_spawn.h
