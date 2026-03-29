@@ -10,6 +10,7 @@ final class DevTunnelProvider: TunnelProvider {
     private let urlSubject = PassthroughSubject<URL, Never>()
     private let errorSubject = PassthroughSubject<String, Never>()
     private var outputBuffer = ""
+    private var urlFound = false
 
     var urlPublisher: AnyPublisher<URL, Never> { urlSubject.eraseToAnyPublisher() }
     var errorPublisher: AnyPublisher<String, Never> { errorSubject.eraseToAnyPublisher() }
@@ -41,10 +42,11 @@ final class DevTunnelProvider: TunnelProvider {
         proc.terminationHandler = { [weak self] p in
             guard let self else { return }
             if p.terminationStatus != 0 {
-                if self.detectsLoginRequired(self.outputBuffer) {
+                // Exit code 3 is the devtunnel "not authenticated" status
+                if p.terminationStatus == 3 || self.detectsLoginRequired(self.outputBuffer) {
                     self.errorSubject.send("DEVTUNNEL_NOT_LOGGED_IN")
                 } else {
-                    self.errorSubject.send("devtunnel exited with status \(p.terminationStatus). Run 'devtunnel user login' if not authenticated.")
+                    self.errorSubject.send("devtunnel exited with status \(p.terminationStatus).")
                 }
             }
         }
@@ -60,13 +62,17 @@ final class DevTunnelProvider: TunnelProvider {
 
     private func parseOutput(_ text: String) {
         outputBuffer += text
-        if let url = parseDevTunnelURL(from: text) {
+        if !urlFound, let url = parseDevTunnelURL(from: text) {
+            urlFound = true
             urlSubject.send(url)
         }
     }
 
     private func detectsLoginRequired(_ output: String) -> Bool {
         let lower = output.lowercased()
-        return lower.contains("not logged in") || lower.contains("user login")
+        return lower.contains("not logged in")
+            || lower.contains("user login")
+            || lower.contains("auth login")
+            || lower.contains("try logging in")
     }
 }

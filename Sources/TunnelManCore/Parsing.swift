@@ -42,13 +42,24 @@ public func extractSessionToken(from path: String) -> String? {
 
 // MARK: - Tunnel URL parsing
 
-/// Parses a DevTunnel public URL from a chunk of devtunnel CLI output.
+/// Parses a DevTunnel **connect** URL from a chunk of devtunnel CLI output.
 /// Matches multi-level subdomains like `abc123-8080.usw3.devtunnels.ms`.
+/// Skips diagnostic/inspect URLs (e.g. `…-inspect.devtunnels.ms`).
 public func parseDevTunnelURL(from text: String) -> URL? {
-    guard let range = text.range(of: #"https://[a-z0-9][a-z0-9\-\.]+\.devtunnels\.ms[^\s]*"#, options: .regularExpression) else {
-        return nil
+    // Walk all regex matches; return the first that isn't an inspect/diagnostic URL.
+    // After the hostname we allow only path-safe characters to avoid capturing
+    // trailing punctuation from prose (periods, parentheses, semicolons, etc.).
+    let pattern = #"https://[a-z0-9][a-z0-9\-\.]+\.devtunnels\.ms(?:/[A-Za-z0-9\-._~:/?#\[\]@!$&'()*+,;=%]*)?"#
+    var searchStart = text.startIndex
+    while searchStart < text.endIndex,
+          let range = text.range(of: pattern, options: .regularExpression, range: searchStart..<text.endIndex) {
+        let raw = String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines)
+        if !raw.contains("-inspect") && !raw.contains("-debug"), let url = URL(string: raw) {
+            return url
+        }
+        searchStart = range.upperBound
     }
-    return URL(string: String(text[range]).trimmingCharacters(in: .whitespacesAndNewlines))
+    return nil
 }
 
 /// Parses a Cloudflare quick-tunnel URL from a chunk of cloudflared CLI output.

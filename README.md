@@ -1,4 +1,4 @@
-# MacTunnel
+# TunnelMan
 
 A macOS menu bar app that gives you a **secure, full terminal session accessible from your phone** — no configuration servers, no open firewall ports, no insecure exposure.
 
@@ -12,7 +12,7 @@ Click the menu bar icon → get a QR code → scan from your phone → type in a
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  Your Mac (MacTunnel.app)                                   │
+│  Your Mac (TunnelMan.app)                                   │
 │                                                             │
 │  PTY (zsh/bash)  ←→  WebSocket Server  ←→  Tunnel CLI      │
 │                            ↓                    ↓           │
@@ -27,7 +27,7 @@ Click the menu bar icon → get a QR code → scan from your phone → type in a
                           └─────────────┘
 ```
 
-1. MacTunnel spawns your shell (`$SHELL`) in a **PTY** (pseudo-terminal)
+1. TunnelMan spawns your shell (`$SHELL`) in a **PTY** (pseudo-terminal)
 2. A local HTTP + WebSocket server streams PTY I/O to an **xterm.js** frontend
 3. A tunnel CLI (`devtunnel` or `cloudflared`) provides an **authenticated HTTPS relay** — no inbound firewall ports opened
 4. A **QR code** encodes the tunnel URL plus a **cryptographic session token** — scan it and you're in
@@ -36,7 +36,7 @@ Click the menu bar icon → get a QR code → scan from your phone → type in a
 
 ## Security Model
 
-MacTunnel uses **layered security** and never exposes your Mac insecurely to the internet:
+TunnelMan uses **layered security** and never exposes your Mac insecurely to the internet:
 
 | Layer | What it does |
 |---|---|
@@ -52,15 +52,21 @@ MacTunnel uses **layered security** and never exposes your Mac insecurely to the
 ### System
 
 - **macOS 13 Ventura** or later (arm64 or x86_64)
-- **Xcode 15** or later (for building) — or just the **Swift toolchain** (no Xcode GUI required)
+- **Xcode Command Line Tools** — the only Apple dependency required
 
-### Swift toolchain (if not using Xcode)
+### Installing Xcode Command Line Tools
 
-Download from [swift.org/download](https://www.swift.org/download/) and ensure `swift` is in your `PATH`:
+If you don't have them yet (no full Xcode install needed):
+
+```bash
+xcode-select --install
+```
+
+This installs the Swift compiler, linker, and macOS SDK (~2 GB). Verify:
 
 ```bash
 swift --version
-# Apple Swift version 6.x ...
+# Apple Swift version 5.9 or later
 ```
 
 ### Tunnel CLIs (optional — only needed for remote access)
@@ -82,17 +88,40 @@ brew install cloudflared
 
 ## Building
 
-### With `swift build` (no Xcode GUI)
+### Quick start
 
 ```bash
 git clone <repo-url>
 cd mactunnel
-swift build -c release
+./build.sh
 ```
 
-The binary is at `.build/release/MacTunnel`.
+This produces **`output/TunnelMan.app`** — a self-contained macOS app bundle you can double-click, drag to `/Applications`, or run from the terminal.
 
-### With Xcode
+### What `build.sh` does
+
+1. Runs `swift build -c release` (uses only Xcode Command Line Tools, no Xcode.app)
+2. Creates a proper `.app` bundle structure in `output/`
+3. Generates `Info.plist` with correct metadata (menu-bar-only, bundle ID, version)
+4. Copies the compiled binary into the bundle
+
+### Manual build (without the script)
+
+If you prefer to build manually:
+
+```bash
+# Compile
+swift build -c release
+
+# The raw binary is at:
+.build/release/TunnelMan
+```
+
+> **Note:** The raw binary works but won't appear as a proper macOS app in Finder or Spotlight. Use `build.sh` for a real `.app` bundle.
+
+### Building with Xcode (optional)
+
+If you have Xcode installed and prefer its IDE:
 
 ```bash
 open Package.swift          # opens the project in Xcode
@@ -106,12 +135,20 @@ Then **Product → Run** (`⌘R`), or **Product → Archive** to build a distrib
 
 ## Running
 
-### From the command line
+### From the build output
+
+```bash
+# After building:
+open output/TunnelMan.app
+
+# Or run directly:
+output/TunnelMan.app/Contents/MacOS/TunnelMan
+```
+
+### From swift run (development)
 
 ```bash
 swift run
-# or, after building:
-.build/release/MacTunnel
 ```
 
 The app will appear in your menu bar as a **terminal icon (⌥)**. It intentionally hides from the Dock.
@@ -119,7 +156,7 @@ The app will appear in your menu bar as a **terminal icon (⌥)**. It intentiona
 ### Usage
 
 1. **Click** the menu bar icon to open the popover
-2. **Choose a tunnel mode** from the bottom-left menu:
+2. **Choose a tunnel mode** from the bottom-left dropdown:
    - `Local Network` — works on the same WiFi, no external tools needed
    - `Microsoft DevTunnel` — accessible from anywhere, requires `devtunnel user login`
    - `Cloudflare Tunnel` — accessible from anywhere, no account needed
@@ -174,32 +211,39 @@ Click the **gear icon** (⚙) in the popover to open Settings:
 ```
 mactunnel/
 ├── Package.swift                        # Swift Package manifest (macOS 13+)
+├── build.sh                             # Builds TunnelMan.app (no Xcode required)
 ├── Sources/
-│   ├── MacTunnelHelper/                 # C helper (fork/exec into PTY)
+│   ├── TunnelManHelper/                 # C helper (fork/exec into PTY)
 │   │   ├── include/pty_spawn.h
 │   │   └── pty_spawn.c
-│   └── MacTunnel/                       # Swift app
-│       ├── MacTunnelApp.swift           # @main entry point, AppDelegate
-│       ├── StatusBarController.swift    # NSStatusItem + popover management
-│       ├── SessionManager.swift         # Central coordinator (ObservableObject)
-│       ├── Views/
-│       │   ├── PopoverView.swift        # Popover UI: status, QR, controls
-│       │   ├── QRCodeView.swift         # CoreImage QR code generation
-│       │   └── SettingsView.swift       # Settings sheet
-│       ├── Terminal/
-│       │   └── PTYManager.swift         # openpty + pty_spawn_shell + I/O relay
-│       ├── Server/
-│       │   ├── LocalHTTPServer.swift    # NWListener HTTP server
-│       │   ├── HTTPConnection.swift     # Per-connection HTTP handler + routing
-│       │   └── WebSocketConnection.swift # RFC 6455 WebSocket, PTY relay, token auth
-│       ├── Tunnel/
-│       │   ├── TunnelProvider.swift     # Protocol definition
-│       │   ├── LocalProvider.swift      # LAN IP provider
-│       │   ├── DevTunnelProvider.swift  # devtunnel subprocess + URL parsing
-│       │   ├── CloudflaredProvider.swift # cloudflared subprocess + URL parsing
-│       │   └── ExecutableFinder.swift   # PATH search utility
-│       └── Resources/
-│           └── terminal.html           # xterm.js frontend (bundled into app)
+│   ├── TunnelManCore/                   # Pure logic (parsing, no OS I/O)
+│   │   └── Parsing.swift
+│   ├── TunnelManServer/                 # Server, terminal, tunnel logic
+│   │   ├── SessionManager.swift
+│   │   ├── Server/
+│   │   │   ├── LocalHTTPServer.swift
+│   │   │   ├── HTTPConnection.swift
+│   │   │   └── WebSocketConnection.swift
+│   │   ├── Terminal/
+│   │   │   └── PTYManager.swift
+│   │   ├── Tunnel/
+│   │   │   ├── TunnelProvider.swift
+│   │   │   ├── LocalProvider.swift
+│   │   │   ├── DevTunnelProvider.swift
+│   │   │   ├── CloudflaredProvider.swift
+│   │   │   └── ExecutableFinder.swift
+│   │   └── Resources/
+│   │       └── terminal.html
+│   └── TunnelMan/                       # SwiftUI app (menu bar UI)
+│       ├── TunnelManApp.swift
+│       ├── StatusBarController.swift
+│       └── Views/
+│           ├── PopoverView.swift
+│           ├── QRCodeView.swift
+│           └── SettingsView.swift
+└── Tests/
+    └── TunnelManTests/
+        └── TunnelManTests.swift
 ```
 
 ---
@@ -227,8 +271,8 @@ mactunnel/
 - Make sure you scanned the QR code from the popover (not an old screenshot)
 - Each session generates a fresh token — reconnect after stopping/starting
 
-**`devtunnel` mode shows "exited with status 1"**
-- Run `devtunnel user login` in Terminal first
+**`devtunnel` mode shows "Sign in to DevTunnel"**
+- Click one of the sign-in buttons in the popover, or run `devtunnel user login` in Terminal first
 - Check `devtunnel` is in your PATH: `which devtunnel`
 
 **`cloudflared` mode shows no URL**
@@ -236,7 +280,7 @@ mactunnel/
 - Check `cloudflared` is in your PATH: `which cloudflared`
 
 **App won't launch at login**
-- Go to **System Settings → General → Login Items** and verify MacTunnel is listed
+- Go to **System Settings → General → Login Items** and verify TunnelMan is listed
 - You may need to grant permission the first time
 
 **"Unauthorized" when opening the URL manually**

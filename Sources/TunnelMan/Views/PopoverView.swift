@@ -182,28 +182,22 @@ struct PopoverView: View {
     }
 
     private var modeMenu: some View {
-        Menu {
-            ForEach(TunnelMode.allCases) { mode in
-                Button {
-                    if case .idle = sessionManager.tunnelState {
-                        sessionManager.tunnelMode = mode
-                    }
-                } label: {
-                    HStack {
-                        Text(mode.rawValue)
-                        if sessionManager.tunnelMode == mode {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+        Picker(selection: Binding(
+            get: { sessionManager.tunnelMode },
+            set: { newMode in
+                if case .idle = sessionManager.tunnelState {
+                    sessionManager.tunnelMode = newMode
                 }
-                .disabled(sessionManager.tunnelState != .idle)
+            }
+        )) {
+            ForEach(TunnelMode.allCases) { mode in
+                Text(mode.rawValue).tag(mode)
             }
         } label: {
-            Label(sessionManager.tunnelMode.rawValue, systemImage: "network")
-                .font(.caption)
+            Label("Mode", systemImage: "network")
         }
-        .menuStyle(.borderlessButton)
-        .fixedSize()
+        .pickerStyle(.menu)
+        .disabled(sessionManager.tunnelState != .idle)
     }
 
     @ViewBuilder

@@ -159,6 +159,27 @@ struct DevTunnelURLParsingTests {
     @Test func schemeIsHTTPS() {
         #expect(parseDevTunnelURL(from: "https://my-tunnel.usw3.devtunnels.ms")?.scheme == "https")
     }
+
+    @Test func inspectURLIsSkipped() {
+        // When only an inspect URL is present, parsing should return nil
+        let output = "Inspect network activity: https://abc123def-19999-inspect.usw3.devtunnels.ms"
+        #expect(parseDevTunnelURL(from: output) == nil)
+    }
+
+    @Test func inspectURLIsSkippedInMixedOutput() {
+        // When inspect comes before connect, the connect URL should still be found
+        let output = """
+        Inspect network activity: https://abc123def-19999-inspect.usw3.devtunnels.ms
+        Connect via browser: https://abc123def-19999.usw3.devtunnels.ms
+        """
+        #expect(parseDevTunnelURL(from: output)?.absoluteString == "https://abc123def-19999.usw3.devtunnels.ms")
+    }
+
+    @Test func trailingCommaIsStripped() {
+        let output = "URL: https://abc123-8080.usw3.devtunnels.ms, inspect: ..."
+        let url = parseDevTunnelURL(from: output)
+        #expect(url?.absoluteString == "https://abc123-8080.usw3.devtunnels.ms")
+    }
 }
 
 // ============================================================
