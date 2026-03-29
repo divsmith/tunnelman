@@ -106,10 +106,11 @@ struct PopoverView: View {
                     DispatchQueue.main.asyncAfter(deadline: .now() + 2) { copied = false }
                 } label: {
                     Label(copied ? "Copied!" : "Copy URL", systemImage: copied ? "checkmark" : "doc.on.doc")
-                        .font(.caption)
+                        .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
-                .foregroundColor(copied ? .green : .accentColor)
+                .buttonStyle(.bordered)
+                .controlSize(.regular)
+                .tint(copied ? .green : .accentColor)
             }
         }
         .frame(maxWidth: .infinity)

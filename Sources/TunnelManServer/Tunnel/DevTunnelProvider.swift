@@ -25,7 +25,7 @@ final class DevTunnelProvider: TunnelProvider {
 
         let proc = Process()
         proc.executableURL = URL(fileURLWithPath: devtunnelPath)
-        proc.arguments = ["host", "-p", "\(port)"]
+        proc.arguments = ["host", "-p", "\(port)", "--allow-anonymous"]
 
         let pipe = Pipe()
         proc.standardOutput = pipe
