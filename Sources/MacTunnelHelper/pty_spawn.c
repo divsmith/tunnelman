@@ -24,6 +24,10 @@ pid_t pty_spawn_shell(int master_fd, int slave_fd, const char *shell, char * con
         if (dup2(slave_fd, STDERR_FILENO) < 0) _exit(1);
         if (slave_fd > STDERR_FILENO) close(slave_fd);
 
+        /* Change to home directory so the shell starts at ~ */
+        const char *home = getenv("HOME");
+        if (home) chdir(home);
+
         char *argv[] = { (char *)shell, NULL };
         execve(shell, argv, env);
         _exit(1);

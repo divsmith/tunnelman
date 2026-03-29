@@ -107,7 +107,16 @@ final class WebSocketConnection {
         }
 
         switch opcode {
-        case 0x01, 0x02: // text or binary — keyboard input from browser
+        case 0x01: // text frame — may be resize control message or keyboard input
+            if let dict = try? JSONSerialization.jsonObject(with: payload) as? [String: Any],
+               dict["type"] as? String == "resize",
+               let cols = dict["cols"] as? Int,
+               let rows = dict["rows"] as? Int {
+                ptyManager?.resize(cols: UInt16(cols), rows: UInt16(rows))
+            } else {
+                ptyManager?.write(payload)
+            }
+        case 0x02: // binary frame — raw keyboard input from browser
             ptyManager?.write(payload)
         case 0x08: // close
             close(); return
