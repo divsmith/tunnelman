@@ -1,0 +1,35 @@
+name: Build TunnelMan
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    name: Build TunnelMan.app
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show toolchain info
+        run: swift --version && xcodebuild -version
+
+      # Tests are excluded because integration tests start a real PTY and NW
+      # listener which fails in sandboxed CI environments. To opt in, uncomment:
+      # - name: Run tests
+      #   run: make test
+
+      - name: Build TunnelMan.app
+        run: make build
+
+      - name: Zip app bundle
+        run: cd output && zip -r TunnelMan.app.zip TunnelMan.app
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TunnelMan-${{ github.sha }}
+          path: output/TunnelMan.app.zip
+          retention-days: 90

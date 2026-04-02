@@ -18,6 +18,10 @@ make test
 
 > Tests import `@testable import TunnelManServer` and `TunnelManCore`. Some integration tests start a real PTY and NW listener — avoid running in sandboxed CI environments.
 
+## CI
+
+`.github/workflows/build.yml` runs on every push to `main`. It builds `TunnelMan.app` via `make build` and uploads it as a GitHub Actions artifact named `TunnelMan-{sha}` (retained 90 days). Tests are excluded from CI due to the PTY/NW integration test limitation above — uncomment the test step in the workflow to opt in.
+
 ## Architecture
 
 Four Swift package targets, strictly layered:
