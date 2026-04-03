@@ -92,8 +92,28 @@ final class HTTPConnection {
         extractSessionToken(from: path)
     }
 
+    // Resolves the SPM resource bundle across all runtime contexts:
+    //   1. Signed .app bundle — Contents/Resources/ (standard macOS location)
+    //   2. Unsigned/dev .app — .app root (legacy SPM placement)
+    //   3. swift test — parent dir of .xctest bundle is the build output dir
+    //   4. Executable-adjacent — CLI tools where executableURL's dir has the bundle
+    //   5. Bundle.module — last resort for swift test via baked-in absolute build path
+    private static let resourceBundle: Bundle = {
+        let name = "TunnelMan_TunnelManServer.bundle"
+        let candidates: [URL?] = [
+            Bundle.main.resourceURL?.appendingPathComponent(name),
+            Bundle.main.bundleURL.appendingPathComponent(name),
+            Bundle.main.bundleURL.deletingLastPathComponent().appendingPathComponent(name),
+            Bundle.main.executableURL?.deletingLastPathComponent().appendingPathComponent(name),
+        ]
+        for candidate in candidates {
+            if let url = candidate, let b = Bundle(url: url) { return b }
+        }
+        return Bundle.module
+    }()
+
     private func serveTerminalHTML() {
-        guard let htmlURL = Bundle.module.url(forResource: "terminal", withExtension: "html"),
+        guard let htmlURL = Self.resourceBundle.url(forResource: "terminal", withExtension: "html"),
               let html = try? Data(contentsOf: htmlURL) else {
             send500(); return
         }

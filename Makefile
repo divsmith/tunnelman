@@ -56,8 +56,9 @@ build:
 	rm -rf "$(BUNDLE_DIR)"; \
 	mkdir -p "$(MACOS_DIR)" "$(RESOURCES_DIR)"; \
 	cp "$(BINARY)" "$(MACOS_DIR)/$(APP_NAME)"; \
-	cp -R "$$RSRC" "$(BUNDLE_DIR)/$(APP_NAME)_TunnelManServer.bundle"; \
+	cp -R "$$RSRC" "$(RESOURCES_DIR)/$(APP_NAME)_TunnelManServer.bundle"; \
 	echo "$$PLIST_CONTENT" > "$(CONTENTS_DIR)/Info.plist"; \
+	codesign --force --sign - "$(BUNDLE_DIR)"; \
 	APP_SIZE=$$(du -sh "$(BUNDLE_DIR)" | cut -f1); \
 	printf '\n✔ %s (%s)\n\n  Run:  open %s\n  Or:   %s/%s\n' \
 		"$(BUNDLE_DIR)" "$$APP_SIZE" "$(BUNDLE_DIR)" "$(MACOS_DIR)" "$(APP_NAME)"
